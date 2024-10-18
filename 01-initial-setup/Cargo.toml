@@ -1,0 +1,8 @@
+[package]
+name = "initial_setup"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eyre = { workspace = true }
+revm = { workspace = true, features = ["alloydb", "ethersdb"] }

@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "01-initial-setup",
+]
+resolver = "2"
+
+[workspace.dependencies]
+eyre = "0.6.12"
+revm = "14.0.3"
