@@ -4,5 +4,17 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+alloy = "0.5.2"
+alloy-primitives = "0.8.9"
+alloy-contract = "0.5.2"
+alloy-network = "0.5.2"
+alloy-sol-macro = "0.8.9"
+alloy-sol-types = "0.8.9"
+alloy-rpc-types = "0.5.2"
+alloy-provider = { workspace = true, features = ["ws"] }
+dotenv = { workspace = true }
 eyre = { workspace = true }
 revm = { workspace = true, features = ["alloydb", "ethersdb"] }
+tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros"] }
+tracing-subscriber = { workspace = true }
+url = { workspace = true }
