@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.24;
 
-contract MinimalInteraction {
+contract SampleContract {
     uint256 public value;
 
     event ValueChanged(uint256 newValue);
@@ -20,11 +20,7 @@ contract MinimalInteraction {
         currentValue = value;
     }
 
-    receive() external payable {
-        emit EtherReceived(msg.sender, msg.value);
-    }
-
-    fallback() external payable {
+    function deposit() external payable {
         emit EtherReceived(msg.sender, msg.value);
     }
 
