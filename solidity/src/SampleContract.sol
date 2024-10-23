@@ -7,6 +7,8 @@ contract SampleContract {
     event ValueChanged(uint256 newValue);
     event EtherReceived(address sender, uint256 amount);
 
+    error SampleError(string cause);
+
     constructor(uint256 _initialValue) {
         value = _initialValue;
     }
@@ -30,5 +32,9 @@ contract SampleContract {
 
     function getBalance() external view returns (uint256 balance) {
         balance = address(this).balance;
+    }
+
+    function revertWithError() external {
+        revert SampleError("failed");
     }
 }

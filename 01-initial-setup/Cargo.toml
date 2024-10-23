@@ -15,9 +15,11 @@ alloy-contract = "0.5.2"
 alloy-network = "0.5.2"
 alloy-primitives = "0.8.9"
 alloy-provider = "0.5.2"
+#alloy-rpc-types-eth = "0.5.2"
 alloy-signer-local = "0.5.2"
 alloy-sol-macro = "0.8.9"
 alloy-sol-types = "0.8.9"
+alloy-transport = "0.5.2"
 dotenv = { workspace = true }
 eyre = { workspace = true }
 tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros"] }
