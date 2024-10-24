@@ -16,3 +16,6 @@ target/
 # IDE Specific (RustRover & VSCode)
 .idea/
 .vscode/
+
+# macos files
+.DS_Store

@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "01-initial-setup",
+    "01-deploy-interact-decode",
 ]
 resolver = "2"
 

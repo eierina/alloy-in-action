@@ -1,79 +1,129 @@
-# In REVM We Rust
+# Alloy in Action
 
-This repository contains the source code accompanying the blog post series **"In REVM We Rust"**, which explores [REVM](https://github.com/bluealloy/revm) (Rust Ethereum Virtual Machine) and its potential applications in MEV (Miner Extractable Value) and Security applications.
+Alloy in Action is a comprehensive repository designed to demonstrate practical methods for integrating Rust applications with blockchain technologies. Serving as the foundation for the "Alloy in Action" [blog series](https://block-zero.io/blog/alloy-in-action/introduction), this project guides you through various facets of Rust-based blockchain client development, offering hands-on examples and in-depth explanations to enhance your understanding and proficiency.
+
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Rust](https://img.shields.io/badge/rust-1.82+-lightgray.svg)
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
 
 ## Table of Contents
 
-- [Introduction](#introduction)
-- [Repository Structure](#repository-structure)
+- [Overview](#overview)
 - [Getting Started](#getting-started)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
-- [Usage](#usage)
-  - [Running Examples](#running-examples)
+  - [Environment Configuration](#environment-configuration)
+- [Rust Projects](#rust-projects)
+- [Solidity Smart Contracts](#solidity-smart-contracts)
+- [Running the Examples](#running-the-examples)
 - [Contributing](#contributing)
 - [License](#license)
-- [Contact](#contact)
 
-## Introduction
+## Overview
 
-The **"In REVM We Rust"** blog series delves into using the Rust-based Ethereum Virtual Machine (REVM) for simulating Ethereum transactions, exploring the mempool, and analyzing MEV opportunities. This repository provides the Rust source code examples discussed in the blog posts, enabling readers to follow along and experiment on their own.
+This repository is designed to showcase how Rust can be effectively used to interact with Ethereum smart contracts. Through a series of Rust sub-projects, you will learn how to:
 
-## Repository Structure
-
-The repository is organized into directories corresponding to each blog post in the series:
-
-- `todo/` - *TODO*
-
-Each directory contains the Rust source code relevant to that particular post.
+- Deploy Solidity smart contracts
+- Interact with contract functions and state
+- Handle events and custom errors
+- Automate contract interactions using Rust macros
+- Extend functionalities with advanced Rust features
 
 ## Getting Started
 
 ### Prerequisites
 
-- [Rust](https://www.rust-lang.org/tools/install) (latest stable version)
+Ensure you have the following installed on your system:
+
+- [Rust](https://www.rust-lang.org/tools/install) (version 1.82 or later)
+- [Foundry](https://getfoundry.sh/) (for Solidity development and testing)
+- [Anvil](https://book.getfoundry.sh/anvil) (local Ethereum node for testing)
 - [Cargo](https://doc.rust-lang.org/cargo/) (comes with Rust)
+- [Git](https://git-scm.com/)
 
 ### Installation
 
-Clone the repository:
+1. **Clone the Repository**
+
+   ```bash
+   git clone https://github.com/eierina/alloy-in-action.git
+   cd alloy-in-action
+   ```
+
+2. **Install Dependencies**
+
+   Ensure you have Rust and Foundry installed. You can install Foundry by following the [official guide](https://book.getfoundry.sh/getting-started/installation).
+
+3. **Set Up Environment Variables**
+
+   Check the `.env` file is in the root directory and correctly configured. See [environment configuration](#environment-configuration) section.
+
+4. **Start Anvil**
+
+   Launch a local Ethereum node using Anvil:
+
+   ```bash
+   anvil
+   ```
+   Anvil will start on `http://127.0.0.1:8545` by default.
+
+### Environment Configuration
+
+The `.env` file is located in the root directory with the following non-sensitive content:
+
+   ```env
+   # Private key for the first default Anvil account
+   ANVIL_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+
+   # RPC URL for the Anvil local Ethereum node
+   ANVIL_RPC_URL=http://127.0.0.1:8545
+
+   # Optional: Chain ID for the Anvil network
+   ANVIL_CHAIN_ID=31337
+   ```
+
+## Rust Projects
+
+### 01-deploy-interact-decode
+
+The first Rust sub-project demonstrates how to:
+
+- Deploy a Solidity smart contract
+- Interact with contract functions (reading and writing state)
+- Handle events and decode logs
+- Manage custom contract errors
+- Utilize the `sol!` macro to generate Rust types from Solidity contracts
+
+The related blog post can be found [here](https://block-zero.io/blog/alloy-in-action/introduction).
+
+### 02-coming-soon
+
+Additional examples and be added as the series progresses.
+
+## Solidity Smart Contracts
+
+The `solidity-smart-contracts` directory contains:
+
+- **SampleContract.sol**: A sample Solidity contract used in the Rust examples.
+- **Tests**: Solidity tests to ensure contract correctness.
+
+Additional contracts and tests will be added as the series progresses.
+
+## Running the Examples
+
+Navigate to the `01-deploy-interact-decode` directory and run the Rust project:
 
 ```bash
-git clone https://github.com/yourusername/in-revm-we-rust.git
-cd in-revm-we-rust
-```
-
-## Usage
-
-### Running Examples
-
-Navigate to the example you're interested in:
-
-```bash
-cd todo
-```
-
-Build and run the Rust program:
-
-```bash
+cd 01-deploy-interact-decode
 cargo run
 ```
 
-Some examples may have additional instructions or dependencies; refer to the `README.md` within each post directory if available.
+Ensure that Anvil is running and the `.env` file is properly configured.
 
 ## Contributing
 
-Contributions are welcome! If you have suggestions or improvements, please open an issue or submit a pull request.
+Contributions are welcome! Feel free to open issues or submit pull requests to enhance the project.
 
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
-
-## Contact
-
-For any questions or feedback, feel free to reach out on [LinkedIn](https://www.linkedin.com/in/edoardoierina/) or [Twitter](https://twitter.com/eierina) or leave a comment on giscus.
-
-
----
-
-**Disclaimer:** This repository is for educational purposes. Use the code responsibly and at your own risk.
