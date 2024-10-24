@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  check:
+    name: Foundry Project
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: solidity-smart-contracts
+    strategy:
+      fail-fast: true
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Show Forge Version
+        run: forge --version
+
+#      - name: Run Forge fmt
+#        run: forge fmt --check
+#        id: fmt
+
+      - name: Run Forge Build
+        run: forge build --sizes
+        id: build
+
+      - name: Run Forge Tests
+        run: forge test -vvv
+        id: test
