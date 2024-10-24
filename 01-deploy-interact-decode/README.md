@@ -2,7 +2,7 @@
 
 ## Overview
 
-This first project demonstrates the fundamental operations of deploying a Solidity smart contract, interacting with its functions, handling events, and managing custom errors on the Ethereum blockchain. Leveraging the Alloy framework, this example showcases seamless integration between Rust and Solidity, enabling efficient blockchain development.
+This first project demonstrates the fundamental operations of connecting to a node, deploying a Solidity smart contract, interacting with its functions, handling events, and managing custom errors on the Ethereum blockchain. Leveraging the Alloy framework, this example showcases seamless integration between Rust and Solidity, enabling efficient blockchain development.
 
 ## Features
 
