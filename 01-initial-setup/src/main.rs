@@ -1,4 +1,4 @@
-use std::ops::Div;
+use std::path::Path;
 use alloy_contract::Error;
 use alloy_network::EthereumWallet;
 use alloy_primitives::{utils, U256};
@@ -8,7 +8,6 @@ use alloy_sol_macro::sol;
 use alloy_sol_types::SolEventInterface;
 use utils::format_ether;
 use eyre::Result;
-use tokio::main;
 use tracing_subscriber;
 use url::Url;
 use crate::SampleContract::{SampleContractErrors};
@@ -35,20 +34,28 @@ sol! {
     }
 }
 
-#[main]
+#[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize environment and dependencies
-    dotenv::dotenv().ok();
+    // Load root .env and initialize environment variables
+    let env_path =
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .join(".env");
+    dotenv::from_path(env_path).ok();
+    
+    // Initialize tracing subscriber for logging
     tracing_subscriber::fmt::init();
 
     // Create signer and wallet
-    let private_key = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+    let private_key = std::env::var("ANVIL_PRIVATE_KEY")?;
     let signer: PrivateKeySigner = private_key.parse()?;
     let signer_address = signer.address();
     let wallet = EthereumWallet::from(signer);
 
     // Set up provider
-    let rpc_url = Url::parse("http://127.0.0.1:8545")?;
+    let rpc_url = std::env::var("ANVIL_RPC_URL")?;
+    let rpc_url = Url::parse(&rpc_url)?;
     let provider = ProviderBuilder::new()
         .with_recommended_fillers() // Adds gas estimation, nonce management, and chain ID fetching
         .wallet(wallet)
@@ -96,15 +103,12 @@ async fn main() -> Result<()> {
     let signer_balance = provider.get_balance(signer_address).await?;
     println!("🔍 Initial signer balance: {} Ξ", format_ether(signer_balance));
 
-    // Deposit Ether to the contract (half of the signer's balance)
-    let deposit_amount = signer_balance.div(U256::from(2));
+    // Deposit 1 Milli-Ether to the contract (half of the signer's balance)
+    let deposit_amount = U256::from(1_000_000_000_000_000u64);
     let tx_builder = contract.deposit().value(deposit_amount).send().await?;
     let pending_tx = tx_builder.register().await?;
     let tx_hash = pending_tx.await?;
-    println!(
-        "🔄 Transaction sent to deposit Ether. Transaction hash: {:#x}",
-        tx_hash
-    );
+    println!("🔄 Transaction sent to deposit Ether. Transaction hash: {:#x}", tx_hash);
 
     // Get the transaction receipt and decode logs
     let receipt = provider
