@@ -46,7 +46,7 @@ Ensure you have the following installed on your system:
 1. **Clone the Repository**
 
    ```bash
-   git clone https://github.com/eierina/alloy-in-action.git
+   git clone --recurse-submodules https://github.com/eierina/alloy-in-action.git
    cd alloy-in-action
    ```
 
