@@ -8,7 +8,6 @@ use alloy_sol_macro::sol;
 use alloy_sol_types::SolEventInterface;
 use utils::format_ether;
 use eyre::Result;
-use tracing_subscriber;
 use url::Url;
 use crate::SampleContract::{SampleContractErrors};
 

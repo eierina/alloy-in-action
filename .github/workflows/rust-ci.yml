@@ -1,0 +1,70 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        subproject:
+          - 01-deploy-interact-decode
+          # Add more sub-projects here as needed, e.g.,
+          # - 02-more-advanced-stuff
+          # - 03-even-more-advanced-stuff
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: clippy, rustfmt
+
+      - name: Cache Cargo Registry
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-registry-
+
+      - name: Cache Cargo Build
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-build-
+
+      - name: Format Check
+        run: cargo fmt --all -- --check
+
+      - name: Build Rust Workspace
+        run: cargo build --workspace --verbose
+
+      - name: Run Tests
+        run: cargo test --workspace --verbose
+
+      - name: Run Clippy
+        run: cargo clippy --workspace -- -D warnings
+
+#      - name: Run Cargo Run for ${{ matrix.subproject }}
+#        run: |
+#          cd ${{ matrix.subproject }}
+#          cargo run --release
+#         env:
+#           ENV_VAR_NAME: ${{ secrets.ENV_VAR_NAME }}
