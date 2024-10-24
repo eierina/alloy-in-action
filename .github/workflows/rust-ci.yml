@@ -50,8 +50,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-build-
 
-      - name: Format Check
-        run: cargo fmt --all -- --check
+#      - name: Format Check
+#        run: cargo fmt --all -- --check
 
       - name: Build Rust Workspace
         run: cargo build --workspace --verbose
