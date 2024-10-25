@@ -4,7 +4,9 @@ Alloy in Action is a comprehensive repository designed to demonstrate practical 
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Rust](https://img.shields.io/badge/rust-1.82+-lightgray.svg)
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
+![solidity](https://img.shields.io/badge/solidity-0.8.24+-lightgray.svg)
+[![Rust CI](https://github.com/eierina/alloy-in-action/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/eierina/alloy-in-action/actions/workflows/rust-ci.yml)
+[![Solidity CI](https://github.com/eierina/alloy-in-action/actions/workflows/solidity-ci.yml/badge.svg)](https://github.com/eierina/alloy-in-action/actions/workflows/solidity-ci.yml)
 
 ## Table of Contents
 
