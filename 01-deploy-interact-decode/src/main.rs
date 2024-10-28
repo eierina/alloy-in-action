@@ -77,14 +77,14 @@ async fn main() -> Result<()> {
     let tx_hash = pending_tx.await?;
     println!("🔄 Transaction sent to set new value. Transaction hash: {:#x}", tx_hash);
 
-    // Get the transaction receipt and decode logs
+    // Get the transaction receipt
     let receipt = provider
         .get_transaction_receipt(tx_hash)
         .await?
         .expect("Transaction receipt not found");
     println!("🧾 Transaction receipt obtained. Receipt hash: {:#x}", receipt.transaction_hash);
 
-    // Decode and handle the ValueChanged event from the transaction receipt
+    // Decode and handle the ValueChanged event from the transaction receipt logs
     for log in receipt.inner.logs() {
         // Decode the log and access the `data` field
         let log = SampleContract::SampleContractEvents::decode_log(log.as_ref(), true)?;
@@ -110,14 +110,14 @@ async fn main() -> Result<()> {
     let tx_hash = pending_tx.await?;
     println!("🔄 Transaction sent to deposit Ether. Transaction hash: {:#x}", tx_hash);
 
-    // Get the transaction receipt and decode logs
+    // Get the transaction receipt
     let receipt = provider
         .get_transaction_receipt(tx_hash)
         .await?
         .expect("Transaction receipt not found");
     println!("🧾 Transaction receipt obtained. Receipt hash: {:#x}", receipt.transaction_hash);
 
-    // Decode and handle the ValueChanged event from the transaction receipt
+    // Decode and handle the EtherReceived event from the transaction receipt logs
     for log in receipt.inner.logs() {
         // Decode the log and access the `data` field
         let log = SampleContract::SampleContractEvents::decode_log(log.as_ref(), true)?;
@@ -146,9 +146,9 @@ async fn main() -> Result<()> {
                 Some(SampleContractErrors::SampleError(sample_error)) => {
                     println!("⚠️ Call reverted with SampleError: {:?}", sample_error.message);
                 },
-                // You can add other SampleContractErrors variants here if needed.
+                // Other SampleContractErrors variants would be added here.
                 _ => {
-                    println!("⚠️ Call reverted with unexpected error: {:?}", transport_error);
+                    println!("⚠️ Call reverted with unexpected transport error: {:?}", transport_error);
                 }
             }
         }
