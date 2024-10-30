@@ -28,7 +28,7 @@ Ensure the following are installed and configured:
    If you haven't already, clone the main repository:
 
    ```bash
-   git clone https://github.com/yourusername/alloy-in-action.git
+   git clone https://github.com/eierina/alloy-in-action.git
    cd alloy-in-action
    ```
 

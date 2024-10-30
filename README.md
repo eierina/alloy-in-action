@@ -1,6 +1,6 @@
 # Alloy in Action
 
-Alloy in Action is a comprehensive repository designed to demonstrate practical methods for integrating Rust applications with blockchain technologies. Serving as the foundation for the "Alloy in Action" [blog series](https://block-zero.io/blog/alloy-in-action/introduction), this project guides you through various facets of Rust-based blockchain client development, offering hands-on examples and in-depth explanations to enhance your understanding and proficiency.
+Alloy in Action is a comprehensive repository designed to demonstrate practical methods for integrating Rust applications with blockchain technologies. Serving as the foundation for the "Alloy in Action" [blog series](https://block-zero.io/blog/alloy-in-action/deploy-interact-decode), this project guides you through various facets of Rust-based blockchain client development, offering hands-on examples and in-depth explanations to enhance your understanding and proficiency.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Rust](https://img.shields.io/badge/rust-1.82+-lightgray.svg)
@@ -96,7 +96,7 @@ The first Rust sub-project demonstrates how to:
 - Manage custom contract errors
 - Utilize the `sol!` macro to generate Rust types from Solidity contracts
 
-The related blog post can be found [here](https://block-zero.io/blog/alloy-in-action/introduction).
+The related blog post can be found [here](https://block-zero.io/blog/alloy-in-action/deploy-interact-decode).
 
 ### 02-coming-soon
 

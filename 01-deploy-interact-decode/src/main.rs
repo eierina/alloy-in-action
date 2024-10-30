@@ -9,7 +9,8 @@ use alloy_sol_types::SolEventInterface;
 use utils::format_ether;
 use eyre::Result;
 use url::Url;
-use crate::SampleContract::{SampleContractErrors};
+use crate::SampleContract::SampleContractErrors;
+use crate::SampleContract::SampleContractEvents;
 
 sol! {
     // source/reference contract in solidity-smart-contracts/src/SampleContract.sol
@@ -84,12 +85,15 @@ async fn main() -> Result<()> {
         .expect("Transaction receipt not found");
     println!("🧾 Transaction receipt obtained. Receipt hash: {:#x}", receipt.transaction_hash);
 
-    // Decode and handle the ValueChanged event from the transaction receipt logs
+    // Iterate over each log present in the transaction receipt
     for log in receipt.inner.logs() {
-        // Decode the log and access the `data` field
-        let log = SampleContract::SampleContractEvents::decode_log(log.as_ref(), true)?;
-        if let SampleContract::SampleContractEvents::ValueChanged(event) = log.data {
-            println!("⚡️ Event: ValueChanged - newValue: {}", event.newValue);
+        // Attempt to decode the current log into a SampleContractEvents instance
+        if let Ok(log) = SampleContractEvents::decode_log(log.as_ref(), true) {
+            // Check if the decoded event is of the `ValueChanged` variant
+            if let SampleContractEvents::ValueChanged(event) = log.data {
+                // Handle the `ValueChanged` event by printing the new value
+                println!("⚡️ Event: ValueChanged - newValue: {}", event.newValue);
+            }
         }
     }
 
@@ -117,12 +121,15 @@ async fn main() -> Result<()> {
         .expect("Transaction receipt not found");
     println!("🧾 Transaction receipt obtained. Receipt hash: {:#x}", receipt.transaction_hash);
 
-    // Decode and handle the EtherReceived event from the transaction receipt logs
+    // Iterate over each log present in the transaction receipt
     for log in receipt.inner.logs() {
-        // Decode the log and access the `data` field
-        let log = SampleContract::SampleContractEvents::decode_log(log.as_ref(), true)?;
-        if let SampleContract::SampleContractEvents::EtherReceived(event) = log.data {
-            println!("⚡️ Event: EtherReceived - sender: {}; amount: {}", event.sender, event.amount);
+        // Attempt to decode the current log into a SampleContractEvents instance
+        if let Ok(log) = SampleContractEvents::decode_log(log.as_ref(), true) {
+            // Check if the decoded event is of the `EtherReceived` variant
+            if let SampleContractEvents::EtherReceived(event) = log.data {
+                // Handle the `EtherReceived` event by printing the sender and amount
+                println!("⚡️ Event: EtherReceived - sender: {}; amount: {}", event.sender, event.amount);
+            }
         }
     }
 
