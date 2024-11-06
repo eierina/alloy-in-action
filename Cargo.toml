@@ -1,14 +1,17 @@
 [workspace]
 members = [
     "01-deploy-interact-decode",
+    "02-new-stuff-testing",
 ]
 resolver = "2"
 
 [workspace.dependencies]
+alloy-chains = "0.1.47"
 alloy-contract = "0.5.4"
 alloy-network = "0.5.4"
 alloy-primitives = "0.8.9"
 alloy-provider = "0.5.4"
+alloy-rpc-types = "0.5.4"
 alloy-signer-local = "0.5.4"
 alloy-sol-macro = "0.8.9"
 alloy-sol-types = "0.8.9"

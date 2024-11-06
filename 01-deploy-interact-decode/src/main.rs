@@ -74,8 +74,9 @@ async fn main() -> Result<()> {
     // Set the contract value to 2
     let new_value = U256::from(2);
     let tx_builder = contract.setValue(new_value).send().await?;
-    let pending_tx = tx_builder.register().await?;
-    let tx_hash = pending_tx.await?;
+    // let pending_tx = tx_builder.register().await?;
+    // let tx_hash = pending_tx.await?;
+    let tx_hash = tx_builder.with_required_confirmations(12).watch().await?;
     println!("🔄 Transaction sent to set new value. Transaction hash: {:#x}", tx_hash);
 
     // Get the transaction receipt
