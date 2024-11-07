@@ -1,21 +1,17 @@
-use std::hash::Hash;
-use std::sync::Arc;
-use std::time::Duration;
 use alloy_chains::NamedChain;
-use alloy_contract::Error;
 use alloy_network::EthereumWallet;
-use alloy_network::primitives::BlockTransactionsKind;
-use alloy_primitives::{address, hex, keccak256, utils, Address, BlockNumber, TxKind, U256};
-use alloy_provider::{PendingTransactionBuilder, Provider, ProviderBuilder, WsConnect};
+use alloy_primitives::{TxKind, U256};
+use alloy_provider::{Provider, ProviderBuilder};
 use alloy_signer_local::PrivateKeySigner;
 use alloy_sol_macro::sol;
-use alloy_sol_types::{SolCall, SolConstructor, SolEventInterface};
+use alloy_sol_types::{SolCall, SolConstructor};
 use eyre::Result;
 use url::Url;
 use new_stuff_testing::utils::{load_environment, setup_logging};
 use alloy_network::TransactionBuilder;
-use alloy_provider::fillers::{NonceFiller, NonceManager, SimpleNonceManager};
-use alloy_rpc_types::{BlockId, TransactionRequest};
+use alloy_rpc_types::TransactionRequest;
+use crate::SampleContract::{getValueCall};
+use alloy_sol_types::private::Bytes;
 
 sol! {
     // source/reference contract in solidity-smart-contracts/src/SampleContract.sol
@@ -51,126 +47,119 @@ async fn main() -> Result<()> {
     let signer_address = signer.address();
     let wallet: EthereumWallet = EthereumWallet::from(signer);
 
+    // Configure provider
+    let ws_url = Url::parse(&std::env::var("ANVIL_WS_URL")?)?;
+    let rpc_url = Url::parse(&std::env::var("ANVIL_RPC_URL")?)?;
+
     // Set up provider
-    let ws_url = std::env::var("ANVIL_WS_URL")?;
-    let ws_url = Url::parse(&ws_url)?;
-    let rpc_url = std::env::var("ANVIL_RPC_URL")?;
-    let rpc_url = Url::parse(&rpc_url)?;
     let provider = ProviderBuilder::new()
         .with_chain_id(31337) // set here for all transaction with this provider, or set on transactionrequest for
         .wallet(wallet)
-        //.with_chain(NamedChain::AnvilHardhat)
-        .with_chain(NamedChain::Mainnet)
+        .with_chain(NamedChain::AnvilHardhat)
         .on_http(rpc_url);
         //.on_ws(WsConnect::new(ws_url)).await?;
 
-    //let provider = Arc::new(provider);
-
-    //let chain_id = provider.get_chain_id().await?;
-    let nonce = provider.get_transaction_count(signer_address).pending().await?;
     let confirmations = 1u64;
 
-    // Get the latest block to retrieve the base fee per gas
-    let latest_block = provider.get_block(BlockId::latest(), BlockTransactionsKind::Hashes).await?.unwrap();
-    let base_fee_per_gas = latest_block.header.base_fee_per_gas.unwrap();
+    // Fetch the latest block to obtain base fee
+    // let latest_block = provider
+    //     .get_block(BlockId::latest(), BlockTransactionsKind::Hashes)
+    //     .await?
+    //     .unwrap();
+    //
+    // let base_fee_per_gas = latest_block.header.base_fee_per_gas.unwrap();
 
-    println!("Base fee per Gas Unit: {}", base_fee_per_gas);
-    println!("Nonce: {}", nonce);
-    println!("Latest block number: {}", latest_block.header.number);
-
-    // Deploy the contract with an initial value of 1
+    // Prepare contract deployment with initial value of 1
     let initial_value = U256::from(1);
-    let deploy_bytecode = SampleContract::constructorCall {
-        _initialValue: initial_value
-    }.abi_encode();
+    let deploy_bytecode: Bytes = [
+        &SampleContract::BYTECODE[..],
+        &SampleContract::constructorCall { _initialValue: initial_value }.abi_encode()[..],
+    ]
+        .concat()
+        .into();
+
+    let nonce = provider.get_transaction_count(signer_address).pending().await?;
 
     let tx = TransactionRequest::default()
         .with_deploy_code(deploy_bytecode)
         // .with_input(deploy_bytecode)
         // .with_to(Address::ZERO)
+        // .with_kind(TxKind::Create)
         .with_nonce(nonce)
-        //.with_chain_id(chain_id)
-        .with_value(U256::ZERO)
         .with_gas_limit(21_000_000)
         .with_max_priority_fee_per_gas(1_000_000_000_000)
         .with_max_fee_per_gas(20_000_000_000_000)
         ;
 
-    // Send transaction
+    // Send deployment transaction
     let tx_builder = provider.send_transaction(tx).await?; // eth_sendRawTransaction
     println!("🔄 Transaction sent ({:#x}).", tx_builder.tx_hash());
 
-    // Wait for the transaction to be confirmed
+    // Await confirmation
     let tx_hash = tx_builder.with_required_confirmations(confirmations).watch().await?;
     // NOTE - watch is equivalent and replaces the two lines below (leave this comment, but you can improve it)
     // let pending_tx = tx_builder.with_required_confirmations(confirmations).register().await?;
     // let tx_hash = pending_tx.await?;
     println!("✅ Transaction confirmed ({:#x}).", tx_hash);
 
-    // Get the transaction receipt
+    // Retrieve transaction receipt
     let receipt = provider
         .get_transaction_receipt(tx_hash)
         .await?
-        .expect("Transaction receipt not found");
-    println!("🧾 Transaction receipt obtained ({:#x}).", receipt.transaction_hash);
+        .expect("Deploy transaction receipt not found");
+    println!("🧾 Deploy transaction receipt obtained ({:#x}).", receipt.transaction_hash);
 
     let deploy_address = receipt.contract_address.unwrap();
-    println!("🧾 Contract deployment address ({:#x}).", deploy_address);
+    println!("🏷️ Contract deployed at address ({:#x}).", deploy_address);
 
+    // Prepare setValue transaction to update the value to 2
+    let tx_data = SampleContract::setValueCall { _value: U256::from(2u64) }.abi_encode();
     let nonce = provider.get_transaction_count(signer_address).pending().await?;
 
-    let tx_data = SampleContract::setValueCall { _value: U256::from(2u64) }.abi_encode();
     let tx = TransactionRequest::default()
         .with_input(tx_data)
-        .with_kind(TxKind::Call(deploy_address))
-        .with_from(signer_address)
         .with_to(deploy_address)
+        .with_from(signer_address)
         .with_nonce(nonce)
-        .with_value(U256::ZERO)
+        .with_kind(TxKind::Call(deploy_address)) // ?
         .with_gas_limit(21_000_000)
         .with_max_priority_fee_per_gas(1_000_000_000_000)
-        .with_max_fee_per_gas(20_000_000_000_000);
+        .with_max_fee_per_gas(20_000_000_000_000)
+        ;
 
-    // Send transaction
+    // Send setValue transaction
     let tx_builder = provider.send_transaction(tx).await?;
-    println!("🔄 Transaction sent ({:#x}).", tx_builder.tx_hash());
+    println!("🔄 setValue transaction sent ({:#x}).", tx_builder.tx_hash());
 
-    // Wait for the transaction to be confirmed
+    // Await confirmation
     let tx_hash = tx_builder.with_required_confirmations(confirmations).watch().await?;
-    println!("✅ Transaction confirmed ({:#x}).", tx_hash);
+    println!("✅ setValue transaction confirmed ({:#x}).", tx_hash);
 
-    // Get the transaction receipt
+    // Retrieve transaction receipt for setValue
     let receipt = provider
         .get_transaction_receipt(tx_hash)
         .await?
-        .expect("Transaction receipt not found");
-    println!("🧾 Transaction receipt obtained  ({:#x}).", receipt.transaction_hash);
+        .expect("setValue transaction receipt not found");
+    println!("🧾 setValue transaction receipt obtained ({:#x}).", receipt.transaction_hash);
 
+    // Prepare getValue call to fetch the current value
     let tx_data = SampleContract::getValueCall { }.abi_encode();
     let tx = TransactionRequest::default()
         .with_input(tx_data)
         .with_to(deploy_address)
-        .with_kind(TxKind::Call(deploy_address))
         .with_from(signer_address)
-        //.with_nonce(nonce)
-        //.with_value(U256::ZERO)
-        // .with_gas_limit(21_000_000)
-        // .with_max_priority_fee_per_gas(1_000_000_000_000)
-        // .with_max_fee_per_gas(20_000_000_000_000)
+        .with_kind(TxKind::Call(deploy_address))
         ;
 
-    let value = provider.call(&tx).await?;
-    //let test = value;
+    // Execute getValue call
+    let result = provider.call(&tx).await?;
+    let decoded_value = getValueCall::abi_decode_returns(&result, true)?;
+    let current_value = decoded_value.currentValue;
+
+    println!("🔍 Current value from contract: {}", current_value);
 
     //let contract = SampleContract::new(deploy_address, provider.clone());
 
-    // Verify that the updated value matches the expected result
-    // let updated_value = contract.getValue().call().await?;
-    // println!("🔍 Updated value retrieved from contract: {:#?}", updated_value);
-    // let acc = provider.get_account(deploy_address).await?;
-    // let code_hash = acc.code_hash;
-    // let addr = *contract.address();
-    // let m = addr == deploy_address;
 /*
 Breakdown by Confirmation Count
 1 Confirmation: The transaction is in the blockchain but may be at risk from a reorganization (reorg). Suitable only for low-value or low-risk transactions.
