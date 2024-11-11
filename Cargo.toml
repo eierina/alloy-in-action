@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "01-deploy-interact-decode",
-    "02-new-stuff-testing",
+    "02-advanced-transaction-composition",
 ]
 resolver = "2"
 
