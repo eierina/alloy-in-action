@@ -1,17 +1,21 @@
 use alloy_chains::NamedChain;
 use alloy_network::EthereumWallet;
-use alloy_primitives::{TxKind, U256};
-use alloy_provider::{Provider, ProviderBuilder};
+use alloy_network::primitives::{BlockTransactions, BlockTransactionsKind};
+use alloy_primitives::{utils, Address, TxKind, U256};
+use alloy_provider::{Provider, ProviderBuilder, WsConnect};
 use alloy_signer_local::PrivateKeySigner;
 use alloy_sol_macro::sol;
 use alloy_sol_types::{SolCall, SolConstructor};
 use eyre::Result;
 use url::Url;
-use new_stuff_testing::utils::{load_environment, setup_logging};
+use advanced_transaction_composition::utils::{load_environment, setup_logging};
 use alloy_network::TransactionBuilder;
-use alloy_rpc_types::TransactionRequest;
+use alloy_rpc_types::{Block, BlockId, BlockNumberOrTag, Transaction, TransactionRequest, TransactionTrait};
 use crate::SampleContract::{getValueCall};
 use alloy_sol_types::private::Bytes;
+use utils::{format_ether, format_units, parse_units};
+
+// ASSUMPTIONS: Ethereum, EIP-1559 only
 
 sol! {
     // source/reference contract in solidity-smart-contracts/src/SampleContract.sol
@@ -47,29 +51,40 @@ async fn main() -> Result<()> {
     let signer_address = signer.address();
     let wallet: EthereumWallet = EthereumWallet::from(signer);
 
-    // Configure provider
+    // Configure provider URL
     let ws_url = Url::parse(&std::env::var("ANVIL_WS_URL")?)?;
     let rpc_url = Url::parse(&std::env::var("ANVIL_RPC_URL")?)?;
+    // let ws_url = Url::parse("ws://192.168.0.188:8546")?;
+    // let rpc_url = Url::parse("http://192.168.0.188:8545")?;
 
-    // Set up provider
+    // Set up provider with chain ID, wallet, and network details
     let provider = ProviderBuilder::new()
-        .with_chain_id(31337) // set here for all transaction with this provider, or set on transactionrequest for
-        .wallet(wallet)
+        .with_chain_id(31337) // anvil-hardhat chain ID - set here for all transaction with this provider, or set on transactionrequest for
         .with_chain(NamedChain::AnvilHardhat)
-        .on_http(rpc_url);
-        //.on_ws(WsConnect::new(ws_url)).await?;
+        .wallet(wallet)
+        .on_ws(WsConnect::new(ws_url)).await?;
 
-    let confirmations = 1u64;
+    // Set the number of confirmations to wait for a transaction to be "confirmed"
+    // (6-12) for high value transactions, (1-3) for low value transactions
+    let confirmations = 3u64;
 
-    // Fetch the latest block to obtain base fee
-    // let latest_block = provider
-    //     .get_block(BlockId::latest(), BlockTransactionsKind::Hashes)
-    //     .await?
-    //     .unwrap();
-    //
-    // let base_fee_per_gas = latest_block.header.base_fee_per_gas.unwrap();
+    // Fetch the latest block to obtain current gas parameters
+    let latest_block = provider
+        .get_block(BlockId::latest(), BlockTransactionsKind::Hashes)
+        .await?
+        .unwrap();
 
-    // Prepare contract deployment with initial value of 1
+    // Calculate next block's base fee based on the latest block
+    let base_fee = calculate_base_fee_per_gas(
+        latest_block.header.base_fee_per_gas.unwrap(),
+        latest_block.header.gas_used,
+        latest_block.header.gas_limit
+    );
+
+    // Fixed tip of 2.5 Gwei for all transactions
+    let tip = parse_units("2.5", "gwei")?.try_into()?;
+
+    // Prepare contract deployment bytecode with initialization of value to 1
     let initial_value = U256::from(1);
     let deploy_bytecode: Bytes = [
         &SampleContract::BYTECODE[..],
@@ -80,16 +95,17 @@ async fn main() -> Result<()> {
 
     let nonce = provider.get_transaction_count(signer_address).pending().await?;
 
-    let tx = TransactionRequest::default()
+    let tx_base = TransactionRequest::default()
         .with_deploy_code(deploy_bytecode)
         // .with_input(deploy_bytecode)
-        // .with_to(Address::ZERO)
         // .with_kind(TxKind::Create)
-        .with_nonce(nonce)
-        .with_gas_limit(21_000_000)
-        .with_max_priority_fee_per_gas(1_000_000_000_000)
-        .with_max_fee_per_gas(20_000_000_000_000)
-        ;
+        .with_nonce(nonce);
+
+    let estimated_gas = provider.estimate_gas(&tx_base).await?;
+
+    let tx = tx_base.with_gas_limit(estimated_gas)
+        .with_max_priority_fee_per_gas(tip)
+        .with_max_fee_per_gas(base_fee as u128 + tip);
 
     // Send deployment transaction
     let tx_builder = provider.send_transaction(tx).await?; // eth_sendRawTransaction
@@ -110,22 +126,37 @@ async fn main() -> Result<()> {
     println!("🧾 Deploy transaction receipt obtained ({:#x}).", receipt.transaction_hash);
 
     let deploy_address = receipt.contract_address.unwrap();
-    println!("🏷️ Contract deployed at address ({:#x}).", deploy_address);
+    println!("📍 Contract deployed at address ({:#x}).", deploy_address);
+
+    // Fetch the latest block to obtain current block gas parameters
+    let latest_block = provider
+        .get_block(BlockId::latest(), BlockTransactionsKind::Hashes)
+        .await?
+        .unwrap();
+
+    // calculate next block's base fee
+    let base_fee = calculate_base_fee_per_gas(
+        latest_block.header.base_fee_per_gas.unwrap(),
+        latest_block.header.gas_used,
+        latest_block.header.gas_limit
+    );
 
     // Prepare setValue transaction to update the value to 2
     let tx_data = SampleContract::setValueCall { _value: U256::from(2u64) }.abi_encode();
     let nonce = provider.get_transaction_count(signer_address).pending().await?;
 
-    let tx = TransactionRequest::default()
+    let tx_base = TransactionRequest::default()
         .with_input(tx_data)
         .with_to(deploy_address)
         .with_from(signer_address)
         .with_nonce(nonce)
-        .with_kind(TxKind::Call(deploy_address)) // ?
-        .with_gas_limit(21_000_000)
-        .with_max_priority_fee_per_gas(1_000_000_000_000)
-        .with_max_fee_per_gas(20_000_000_000_000)
-        ;
+        .with_kind(TxKind::Call(deploy_address));
+
+    let estimated_gas = provider.estimate_gas(&tx_base).await?;
+
+    let tx = tx_base.with_gas_limit(estimated_gas)
+        .with_max_priority_fee_per_gas(tip)
+        .with_max_fee_per_gas(base_fee as u128 + tip);
 
     // Send setValue transaction
     let tx_builder = provider.send_transaction(tx).await?;
@@ -158,49 +189,61 @@ async fn main() -> Result<()> {
 
     println!("🔍 Current value from contract: {}", current_value);
 
-    //let contract = SampleContract::new(deploy_address, provider.clone());
-
-/*
-Breakdown by Confirmation Count
-1 Confirmation: The transaction is in the blockchain but may be at risk from a reorganization (reorg). Suitable only for low-value or low-risk transactions.
-
-6 Confirmations: Often considered reasonably secure for lower-value transactions. This number is common for exchanges and applications with moderate security needs, providing a balance between speed and security.
-
-12 Confirmations: This is widely considered secure, as the likelihood of reorgs impacting the transaction drops significantly. For most use cases, this is the standard for high-value transactions.
-
-24+ Confirmations: For very high-value or critical transactions, some parties may wait for 24 confirmations or more. This adds extra safety, though it’s rare to require this many confirmations.
-
-Practical Recommendation
-In summary:
-
-12 confirmations is usually safe and is a common standard for Ethereum mainnet.
-Adjust up or down based on the transaction’s value and risk sensitivity.
-*/
-    // println!("Sending tx: {:?}", tx);
-    // let tx_builder = provider.send_transaction(tx).await?; // eth_sendRawTransaction
-    // let sent_hash = *tx_builder.tx_hash();
-    // println!("Sent tx: {:?}", sent_hash);
-    // let pending_tx = tx_builder.with_required_confirmations(12).register().await?; // eth_getTransactionReceipt
-    // println!("Got pending tx");
-/* WS:
-eth_chainId
-eth_getTransactionCount
-eth_getBlockByNumber
-eth_sendRawTransaction
-eth_getTransactionReceipt
-*/
-
-/* HTTP
-eth_chainId
-eth_getTransactionCount
-eth_getBlockByNumber
-eth_sendRawTransaction
-eth_blockNumber
-eth_getTransactionReceipt
-eth_getBlockByNumber
-*/
-
-
     Ok(())
+}
+
+/// Calculates the base fee per gas for the next block based on EIP-1559 specifications.
+///
+/// This function adjusts the base fee according to the gas usage of the current block.
+/// If the gas used is higher than the target (50% of the gas limit), the base fee increases.
+/// If it's lower, the base fee decreases. The change is capped at a maximum of ±12.5% per block.
+///
+/// # Arguments
+///
+/// * `current_base_fee` - The base fee per gas of the current block (in wei).
+/// * `current_gas_used` - The total gas used in the current block.
+/// * `current_gas_limit` - The gas limit of the current block.
+///
+/// # Returns
+///
+/// * `u64` - The calculated base fee per gas for the next block.
+pub fn calculate_base_fee_per_gas(
+    current_base_fee: u64,
+    current_gas_used: u64,
+    current_gas_limit: u64,
+) -> u64 {
+    // Calculate the target gas usage (50% of the gas limit)
+    let gas_target = current_gas_limit / 2;
+
+    // Calculate the difference between gas used and gas target
+    let gas_delta = current_gas_used as i64 - gas_target as i64;
+
+    // Maximum base fee change is 12.5% of the current base fee
+    let max_base_fee_change = current_base_fee / 8;
+
+    // If gas usage is exactly at the target, base fee remains the same
+    if gas_delta == 0 {
+        return current_base_fee;
+    }
+
+    // Calculate the absolute value of gas delta for adjustment calculation
+    let gas_delta_abs = gas_delta.abs() as u64;
+
+    // Compute the base fee change
+    // Using u128 to prevent potential overflow in intermediate calculations
+    let base_fee_change = ((max_base_fee_change as u128 * gas_delta_abs as u128)
+        / gas_target as u128) as u64;
+
+    if gas_delta > 0 {
+        // Increase base fee by the calculated change
+        current_base_fee + base_fee_change
+    } else {
+        // Decrease base fee by the calculated change, ensuring it doesn't go below zero
+        if current_base_fee > base_fee_change {
+            current_base_fee - base_fee_change
+        } else {
+            0
+        }
+    }
 }
 

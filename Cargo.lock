@@ -18,6 +18,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "512761e0bb2578dd7380c6baaa0f4ce03e84f95e960231d1dec8bf4d7d6e2627"
 
 [[package]]
+name = "advanced_transaction_composition"
+version = "0.1.0"
+dependencies = [
+ "alloy-chains",
+ "alloy-contract",
+ "alloy-network",
+ "alloy-primitives",
+ "alloy-provider",
+ "alloy-rpc-types",
+ "alloy-signer-local",
+ "alloy-sol-macro",
+ "alloy-sol-types",
+ "alloy-transport",
+ "dotenv",
+ "eyre",
+ "tokio",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
 name = "ahash"
 version = "0.8.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -339,9 +360,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-rpc-types"
-version = "0.6.1"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de0f4f019359bd1ae409993ba063d213ba1e1ff6c2a39ba178f480a0ceb4c5f9"
+checksum = "90be9542c6c9bb0d21ac08104ca0a3d1fb83e56f1c704f5cdcf6fb9e01fcbd75"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-types-engine",
@@ -352,9 +373,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-rpc-types-engine"
-version = "0.6.1"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c5a591c9b2a58d5168867083d4c81a78089d6a90669b57b125800c07ee1dd6d"
+checksum = "5ed9e7b3233cb3e0aaeaedc4e21e1ea9d99e947a7206241a9f9521c138193978"
 dependencies = [
  "alloy-consensus",
  "alloy-eips",
@@ -1000,12 +1021,10 @@ checksum = "e8566979429cf69b49a5c740c60791108e86440e8be149bbea4fe54d2c32d6e2"
 name = "deploy_interact_decode"
 version = "0.1.0"
 dependencies = [
- "alloy-chains",
  "alloy-contract",
  "alloy-network",
  "alloy-primitives",
  "alloy-provider",
- "alloy-rpc-types",
  "alloy-signer-local",
  "alloy-sol-macro",
  "alloy-sol-types",
@@ -1919,27 +1938,6 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "tempfile",
-]
-
-[[package]]
-name = "new_stuff_testing"
-version = "0.1.0"
-dependencies = [
- "alloy-chains",
- "alloy-contract",
- "alloy-network",
- "alloy-primitives",
- "alloy-provider",
- "alloy-rpc-types",
- "alloy-signer-local",
- "alloy-sol-macro",
- "alloy-sol-types",
- "alloy-transport",
- "dotenv",
- "eyre",
- "tokio",
- "tracing-subscriber",
- "url",
 ]
 
 [[package]]
