@@ -1,7 +1,8 @@
+use std::path::Path;
 use alloy_chains::NamedChain;
 use alloy_network::EthereumWallet;
-use alloy_network::primitives::{BlockTransactions, BlockTransactionsKind};
-use alloy_primitives::{utils, Address, TxKind, U256};
+use alloy_network::primitives::BlockTransactionsKind;
+use alloy_primitives::{utils, TxKind, U256};
 use alloy_provider::{Provider, ProviderBuilder, WsConnect};
 use alloy_signer_local::PrivateKeySigner;
 use alloy_sol_macro::sol;
@@ -10,12 +11,10 @@ use eyre::Result;
 use url::Url;
 use advanced_transaction_composition::utils::{load_environment, setup_logging};
 use alloy_network::TransactionBuilder;
-use alloy_rpc_types::{Block, BlockId, BlockNumberOrTag, Transaction, TransactionRequest, TransactionTrait};
+use alloy_rpc_types::{BlockId, TransactionRequest, TransactionTrait};
 use crate::SampleContract::{getValueCall};
 use alloy_sol_types::private::Bytes;
-use utils::{format_ether, format_units, parse_units};
-
-// ASSUMPTIONS: Ethereum, EIP-1559 only
+use utils::parse_units;
 
 sol! {
     // source/reference contract in solidity-smart-contracts/src/SampleContract.sol
@@ -42,8 +41,16 @@ sol! {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    load_environment()?;
-    setup_logging();
+    // Load root .env and initialize environment variables
+    let env_path =
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .join(".env");
+    dotenv::from_path(env_path).ok();
+
+    // Initialize tracing subscriber for logging
+    tracing_subscriber::fmt::init();
 
     // Create signer and wallet
     let private_key = std::env::var("ANVIL_PRIVATE_KEY")?;
@@ -54,8 +61,6 @@ async fn main() -> Result<()> {
     // Configure provider URL
     let ws_url = Url::parse(&std::env::var("ANVIL_WS_URL")?)?;
     let rpc_url = Url::parse(&std::env::var("ANVIL_RPC_URL")?)?;
-    // let ws_url = Url::parse("ws://192.168.0.188:8546")?;
-    // let rpc_url = Url::parse("http://192.168.0.188:8545")?;
 
     // Set up provider with chain ID, wallet, and network details
     let provider = ProviderBuilder::new()
