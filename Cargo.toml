@@ -1,23 +1,20 @@
 [workspace]
 members = [
     "01-deploy-interact-decode",
-    "02-advanced-transaction-composition",
 ]
 resolver = "2"
 
 [workspace.dependencies]
-alloy-chains = "0.1.47"
-alloy-contract = "0.6.1"
-alloy-network = "0.6.1"
-alloy-primitives = "0.8.11"
-alloy-provider = "0.6.1"
-alloy-rpc-types = "0.6.1"
-alloy-signer-local = "0.6.1"
-alloy-sol-macro = "0.8.11"
-alloy-sol-types = "0.8.11"
-alloy-transport = "0.6.1"
+alloy-contract = "0.5.4"
+alloy-network = "0.5.4"
+alloy-primitives = "0.8.9"
+alloy-provider = "0.5.4"
+alloy-signer-local = "0.5.4"
+alloy-sol-macro = "0.8.9"
+alloy-sol-types = "0.8.9"
+alloy-transport = "0.5.4"
 dotenv = "0.15.0"
 eyre = "0.6.12"
 tokio = "1.41.0"
 tracing-subscriber = "0.3.18"
-url = "2.5.3"
+url = "2.5.2"
