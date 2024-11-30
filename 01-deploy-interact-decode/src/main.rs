@@ -15,23 +15,41 @@ use crate::SampleContract::SampleContractEvents;
 sol! {
     // source/reference contract in solidity-smart-contracts/src/SampleContract.sol
     // bytecode via `solc SampleContract.sol --bin --via-ir --optimize --optimize-runs 1`
-    #[sol(rpc, bytecode = "608034604d57601f61024238819003918201601f19168301916001600160401b03831184841017605157808492602094604052833981010312604d57515f556040516101dc90816100668239f35b5f80fd5b634e487b7160e01b5f52604160045260245ffdfe6080806040526004361015610012575f80fd5b5f3560e01c90816312065fe01461018e5750806320965255146101375780633ccfd60b146101535780633fa4f2451461013757806355241077146100f457806357eca1a5146100a95763d0e30db014610069575f80fd5b5f3660031901126100a5577f1e57e3bb474320be3d2c77138f75b7c3941292d647f5f9634e33a8e94e0e069b60408051338152346020820152a1005b5f80fd5b346100a5575f3660031901126100a5576040516335fdd7ab60e21b815260206004820152601260248201527168656c6c6f2066726f6d207265766572742160701b6044820152606490fd5b346100a55760203660031901126100a5577f93fe6d397c74fdf1402a8b72e47b68512f0510d7b98a4bc4cbdf6ac7108b3c596020600435805f55604051908152a1005b346100a5575f3660031901126100a55760205f54604051908152f35b346100a5575f3660031901126100a5575f80808047818115610185575b3390f11561017a57005b6040513d5f823e3d90fd5b506108fc610170565b346100a5575f3660031901126100a557602090478152f3fea2646970667358221220b4a67dc718859dcd100786802486745715317198aba986b0fa547130f8a19cd164736f6c634300081b0033")]
+    #[sol(rpc, bytecode = "608034604d57601f61028038819003918201601f19168301916001600160401b03831184841017605157808492602094604052833981010312604d57515f5560405161021a90816100668239f35b5f80fd5b634e487b7160e01b5f52604160045260245ffdfe6080806040526004361015610012575f80fd5b5f3560e01c90816312065fe0146101cc5750806320965255146101405780633ccfd60b1461015c5780633fa4f2451461014057806355241077146100f857806357eca1a5146100ad5763d0e30db014610069575f80fd5b5f3660031901126100a957476040519034825260208201527f1d57945c1033a96907a78f6e0ebf6a03815725dac25f33cc806558670344ac8860403392a2005b5f80fd5b346100a9575f3660031901126100a9576040516335fdd7ab60e21b815260206004820152601260248201527168656c6c6f2066726f6d207265766572742160701b6044820152606490fd5b346100a95760203660031901126100a9576004355f5490805f556040519081527fe435f0fbe584e62b62f48f4016a57ef6c95e4c79f5babbe6ad3bb64f3281d26160203392a3005b346100a9575f3660031901126100a95760205f54604051908152f35b346100a9575f3660031901126100a95747805f81156101c3575b5f80809381933390f1156101b8576040519081525f60208201527fd5ca65e1ec4f4864fea7b9c5cb1ec3087a0dbf9c74641db3f6458edf445c405160403392a2005b6040513d5f823e3d90fd5b506108fc610176565b346100a9575f3660031901126100a957602090478152f3fea2646970667358221220cae439afc02e7259cc99c579d322222052f82f79b377ffd437d0523157cb795f64736f6c634300081b0033")]
     contract SampleContract {
-        uint256 public value;
+        // Events
+        event ValueChanged(address indexed updater, uint256 indexed oldValue, uint256 newValue);
+        event EtherReceived(address indexed sender, uint256 amount, uint256 newBalance);
+        event EtherWithdrawn(address indexed recipient, uint256 amount, uint256 remainingBalance);
 
-        event ValueChanged(uint256 newValue);
-        event EtherReceived(address sender, uint256 amount);
+        // Errors
+        error SampleError(string cause);
 
-        error SampleError(string message);
-
+        // Constructor
         constructor(uint256 _initialValue);
 
+        // Functions
+        /// @notice Sets a new value for the 'value' state variable
+        /// @param _value The new value to be set
         function setValue(uint256 _value) external;
+
+        /// @notice Retrieves the current value of the 'value' state variable
+        /// @return currentValue The current value stored in 'value'
         function getValue() external view returns (uint256 currentValue);
+
+        /// @notice Accepts Ether deposits and logs the sender and amount
         function deposit() external payable;
+
+        /// @notice Withdraws the entire balance of the contract to the caller
         function withdraw() external;
+
+        /// @notice Retrieves the contract's current Ether balance
+        /// @return balance The current balance of the contract in wei
         function getBalance() external view returns (uint256 balance);
-        function revertWithError() external;
+
+        /// @notice Reverts the transaction with a custom error message
+        /// @dev Used to demonstrate custom error handling in Solidity
+        function revertWithError() external pure;
     }
 }
 
@@ -40,11 +58,11 @@ async fn main() -> Result<()> {
     // Load root .env and initialize environment variables
     let env_path =
         Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .join(".env");
+            .parent()
+            .unwrap()
+            .join(".env");
     dotenv::from_path(env_path).ok();
-    
+
     // Initialize tracing subscriber for logging
     tracing_subscriber::fmt::init();
 
@@ -92,7 +110,13 @@ async fn main() -> Result<()> {
             // Check if the decoded event is of the `ValueChanged` variant
             if let SampleContractEvents::ValueChanged(event) = log.data {
                 // Handle the `ValueChanged` event by printing the new value
-                println!("⚡️ Event: ValueChanged - newValue: {}", event.newValue);
+                println!(
+                    "⚡️ Event: ValueChanged - \
+                    updater: {}, \
+                    oldValue: {}, \
+                    newValue: {}",
+                    event.updater, event.oldValue, event.newValue
+                );
             }
         }
     }
@@ -128,7 +152,13 @@ async fn main() -> Result<()> {
             // Check if the decoded event is of the `EtherReceived` variant
             if let SampleContractEvents::EtherReceived(event) = log.data {
                 // Handle the `EtherReceived` event by printing the sender and amount
-                println!("⚡️ Event: EtherReceived - sender: {}; amount: {}", event.sender, event.amount);
+                println!(
+                    "⚡️ Event: EtherReceived - \
+                    sender: {}; \
+                    amount: {} Ξ, \
+                    newBalance: {} Ξ",
+                    event.sender, format_ether(event.amount), format_ether(event.newBalance)
+                );
             }
         }
     }
@@ -151,7 +181,7 @@ async fn main() -> Result<()> {
                 .and_then(|error| error.as_decoded_error::<SampleContractErrors>(true))
             {
                 Some(SampleContractErrors::SampleError(sample_error)) => {
-                    println!("⚠️ Call reverted with SampleError: {:?}", sample_error.message);
+                    println!("⚠️ Call reverted with SampleError: {:?}", sample_error.cause);
                 },
                 // Other SampleContractErrors variants would be added here.
                 _ => {
@@ -167,4 +197,3 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
-
