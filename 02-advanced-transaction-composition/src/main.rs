@@ -247,7 +247,7 @@ pub fn calculate_base_fee_per_gas(
     }
 
     // Calculate the absolute value of gas delta for adjustment calculation
-    let gas_delta_abs = gas_delta.abs() as u64;
+    let gas_delta_abs = gas_delta.unsigned_abs();
 
     // Compute the base fee change
     // Using u128 to prevent potential overflow in intermediate calculations
