@@ -9,9 +9,8 @@ use alloy_sol_macro::sol;
 use alloy_sol_types::{SolCall, SolConstructor};
 use eyre::Result;
 use url::Url;
-use advanced_transaction_composition::utils::{load_environment, setup_logging};
 use alloy_network::TransactionBuilder;
-use alloy_rpc_types::{BlockId, TransactionRequest, TransactionTrait};
+use alloy_rpc_types::{BlockId, TransactionRequest};
 use crate::SampleContract::{getValueCall};
 use alloy_sol_types::private::Bytes;
 use utils::parse_units;
@@ -19,23 +18,41 @@ use utils::parse_units;
 sol! {
     // source/reference contract in solidity-smart-contracts/src/SampleContract.sol
     // bytecode via `solc SampleContract.sol --bin --via-ir --optimize --optimize-runs 1`
-    #[sol(rpc, bytecode = "608034604d57601f61024238819003918201601f19168301916001600160401b03831184841017605157808492602094604052833981010312604d57515f556040516101dc90816100668239f35b5f80fd5b634e487b7160e01b5f52604160045260245ffdfe6080806040526004361015610012575f80fd5b5f3560e01c90816312065fe01461018e5750806320965255146101375780633ccfd60b146101535780633fa4f2451461013757806355241077146100f457806357eca1a5146100a95763d0e30db014610069575f80fd5b5f3660031901126100a5577f1e57e3bb474320be3d2c77138f75b7c3941292d647f5f9634e33a8e94e0e069b60408051338152346020820152a1005b5f80fd5b346100a5575f3660031901126100a5576040516335fdd7ab60e21b815260206004820152601260248201527168656c6c6f2066726f6d207265766572742160701b6044820152606490fd5b346100a55760203660031901126100a5577f93fe6d397c74fdf1402a8b72e47b68512f0510d7b98a4bc4cbdf6ac7108b3c596020600435805f55604051908152a1005b346100a5575f3660031901126100a55760205f54604051908152f35b346100a5575f3660031901126100a5575f80808047818115610185575b3390f11561017a57005b6040513d5f823e3d90fd5b506108fc610170565b346100a5575f3660031901126100a557602090478152f3fea2646970667358221220b4a67dc718859dcd100786802486745715317198aba986b0fa547130f8a19cd164736f6c634300081b0033")]
+    #[sol(rpc, bytecode = "608034604d57601f61028038819003918201601f19168301916001600160401b03831184841017605157808492602094604052833981010312604d57515f5560405161021a90816100668239f35b5f80fd5b634e487b7160e01b5f52604160045260245ffdfe6080806040526004361015610012575f80fd5b5f3560e01c90816312065fe0146101cc5750806320965255146101405780633ccfd60b1461015c5780633fa4f2451461014057806355241077146100f857806357eca1a5146100ad5763d0e30db014610069575f80fd5b5f3660031901126100a957476040519034825260208201527f1d57945c1033a96907a78f6e0ebf6a03815725dac25f33cc806558670344ac8860403392a2005b5f80fd5b346100a9575f3660031901126100a9576040516335fdd7ab60e21b815260206004820152601260248201527168656c6c6f2066726f6d207265766572742160701b6044820152606490fd5b346100a95760203660031901126100a9576004355f5490805f556040519081527fe435f0fbe584e62b62f48f4016a57ef6c95e4c79f5babbe6ad3bb64f3281d26160203392a3005b346100a9575f3660031901126100a95760205f54604051908152f35b346100a9575f3660031901126100a95747805f81156101c3575b5f80809381933390f1156101b8576040519081525f60208201527fd5ca65e1ec4f4864fea7b9c5cb1ec3087a0dbf9c74641db3f6458edf445c405160403392a2005b6040513d5f823e3d90fd5b506108fc610176565b346100a9575f3660031901126100a957602090478152f3fea2646970667358221220cae439afc02e7259cc99c579d322222052f82f79b377ffd437d0523157cb795f64736f6c634300081b0033")]
     contract SampleContract {
-        uint256 public value;
+        // Events
+        event ValueChanged(address indexed updater, uint256 indexed oldValue, uint256 newValue);
+        event EtherReceived(address indexed sender, uint256 amount, uint256 newBalance);
+        event EtherWithdrawn(address indexed recipient, uint256 amount, uint256 remainingBalance);
 
-        event ValueChanged(uint256 newValue);
-        event EtherReceived(address sender, uint256 amount);
+        // Errors
+        error SampleError(string cause);
 
-        error SampleError(string message);
-
+        // Constructor
         constructor(uint256 _initialValue);
 
+        // Functions
+        /// @notice Sets a new value for the 'value' state variable
+        /// @param _value The new value to be set
         function setValue(uint256 _value) external;
+
+        /// @notice Retrieves the current value of the 'value' state variable
+        /// @return currentValue The current value stored in 'value'
         function getValue() external view returns (uint256 currentValue);
+
+        /// @notice Accepts Ether deposits and logs the sender and amount
         function deposit() external payable;
+
+        /// @notice Withdraws the entire balance of the contract to the caller
         function withdraw() external;
+
+        /// @notice Retrieves the contract's current Ether balance
+        /// @return balance The current balance of the contract in wei
         function getBalance() external view returns (uint256 balance);
-        function revertWithError() external;
+
+        /// @notice Reverts the transaction with a custom error message
+        /// @dev Used to demonstrate custom error handling in Solidity
+        function revertWithError() external pure;
     }
 }
 
@@ -58,20 +75,29 @@ async fn main() -> Result<()> {
     let signer_address = signer.address();
     let wallet: EthereumWallet = EthereumWallet::from(signer);
 
-    // Configure provider URL
-    let ws_url = Url::parse(&std::env::var("ANVIL_WS_URL")?)?;
-    let rpc_url = Url::parse(&std::env::var("ANVIL_RPC_URL")?)?;
-
-    // Set up provider with chain ID, wallet, and network details
+    // Set up provider with chain ID, wallet, and network details (using WebSocket)
+    let ws_url = std::env::var("ANVIL_WS_URL")?;
+    let ws_url = Url::parse(&ws_url)?;
     let provider = ProviderBuilder::new()
-        .with_chain_id(31337) // anvil-hardhat chain ID - set here for all transaction with this provider, or set on transactionrequest for
         .with_chain(NamedChain::AnvilHardhat)
+        .with_chain_id(31337)
         .wallet(wallet)
         .on_ws(WsConnect::new(ws_url)).await?;
 
     // Set the number of confirmations to wait for a transaction to be "confirmed"
     // (6-12) for high value transactions, (1-3) for low value transactions
     let confirmations = 3u64;
+
+    // Prepare contract deployment bytecode with initialization of value to 1
+    let initial_value = U256::from(1);
+    let deploy_bytecode: Bytes = [
+        &SampleContract::BYTECODE[..],
+        &SampleContract::constructorCall { _initialValue: initial_value }.abi_encode()[..],
+    ]
+        .concat()
+        .into();
+
+    let nonce = provider.get_transaction_count(signer_address).pending().await?;
 
     // Fetch the latest block to obtain current gas parameters
     let latest_block = provider
@@ -86,19 +112,8 @@ async fn main() -> Result<()> {
         latest_block.header.gas_limit
     );
 
-    // Fixed tip of 2.5 Gwei for all transactions
+    // We set a fixed tip of 2.5 Gwei for simplicity.
     let tip = parse_units("2.5", "gwei")?.try_into()?;
-
-    // Prepare contract deployment bytecode with initialization of value to 1
-    let initial_value = U256::from(1);
-    let deploy_bytecode: Bytes = [
-        &SampleContract::BYTECODE[..],
-        &SampleContract::constructorCall { _initialValue: initial_value }.abi_encode()[..],
-    ]
-        .concat()
-        .into();
-
-    let nonce = provider.get_transaction_count(signer_address).pending().await?;
 
     let tx_base = TransactionRequest::default()
         .with_deploy_code(deploy_bytecode)
@@ -232,7 +247,7 @@ pub fn calculate_base_fee_per_gas(
     }
 
     // Calculate the absolute value of gas delta for adjustment calculation
-    let gas_delta_abs = gas_delta.abs() as u64;
+    let gas_delta_abs = gas_delta.unsigned_abs();
 
     // Compute the base fee change
     // Using u128 to prevent potential overflow in intermediate calculations
@@ -244,11 +259,7 @@ pub fn calculate_base_fee_per_gas(
         current_base_fee + base_fee_change
     } else {
         // Decrease base fee by the calculated change, ensuring it doesn't go below zero
-        if current_base_fee > base_fee_change {
-            current_base_fee - base_fee_change
-        } else {
-            0
-        }
+        current_base_fee.saturating_sub(base_fee_change)
     }
 }
 

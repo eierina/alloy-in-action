@@ -13,13 +13,16 @@ contract SampleContractTest is Test {
     }
 
     function testSetValue() public {
+        address updater = address(0xb33f);
+        uint256 oldValue = 0;
         uint256 newValue = 1;
 
         // Expect the ValueChanged event to be emitted with the new value
         vm.expectEmit(true, false, false, true);
-        emit SampleContract.ValueChanged(newValue);
+        emit SampleContract.ValueChanged(updater, oldValue, newValue);
 
         // Call setValue and check if the value is updated correctly
+        vm.prank(updater);
         sampleContract.setValue(newValue);
         uint256 currentValue = sampleContract.getValue();
         assertEq(currentValue, newValue, "Value was not set correctly");
@@ -32,15 +35,16 @@ contract SampleContractTest is Test {
     }
 
     function testDeposit() public {
+        address depositor = address(0xb33f);
         uint256 depositAmount = 2 ether;
-        address depositor = address(0xbadc0de);
-
+        uint256 newBalance = 2 ether;
+        
         // Expect the EtherReceived event to be emitted with the sender and amount
         vm.expectEmit(true, true, false, true);
-        emit SampleContract.EtherReceived(depositor, depositAmount);
+        emit SampleContract.EtherReceived(depositor, depositAmount, newBalance);
 
         // Send 2 Ether to the contract from depositor address
-        vm.deal(depositor, depositAmount); // Ensure the depositor has enough Ether
+        vm.deal(depositor, depositAmount);
         vm.prank(depositor);
         sampleContract.deposit{value: depositAmount}();
 
@@ -50,11 +54,11 @@ contract SampleContractTest is Test {
     }
 
     function testWithdraw() public {
-        uint256 depositAmount = 1 ether;
-        address depositor = address(0xbadc0de);
-
+        address depositor = address(0xb33f);
+        uint256 depositAmount = 2 ether;
+        
         // Send 2 Ether to the contract from depositor address
-        vm.deal(depositor, 2 ether); // Ensure the depositor has enough Ether
+        vm.deal(depositor, depositAmount);
         vm.prank(depositor);
         sampleContract.deposit{value: depositAmount}();
 
@@ -62,7 +66,7 @@ contract SampleContractTest is Test {
         uint256 balanceBefore = sampleContract.getBalance();
         assertEq(balanceBefore, depositAmount, "Initial contract balance is incorrect");
 
-        // Now, prank the call again so the same address (depositor) withdraws
+        // Withdraw entire balance
         vm.prank(depositor);
         sampleContract.withdraw();
 
@@ -82,13 +86,16 @@ contract SampleContractTest is Test {
     }
 
     function testGetBalance() public {
+        address depositor = address(0xb33f);
         uint256 depositAmount = 1 ether;
 
         // Deposit some ETH first
+        vm.deal(depositor, depositAmount);
+        vm.prank(depositor);
         sampleContract.deposit{value: depositAmount}();
 
         // Retrieve the balance using getBalance() and compare with the actual balance
         uint256 contractBalance = sampleContract.getBalance();
-        assertEq(contractBalance, address(sampleContract).balance, "Balance returned by getBalance() is incorrect");
+        assertEq(contractBalance, depositAmount, "Balance returned by getBalance() is incorrect");
     }
 }
