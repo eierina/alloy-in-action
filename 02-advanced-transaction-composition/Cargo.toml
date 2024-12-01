@@ -1,0 +1,22 @@
+[package]
+name = "advanced_transaction_composition"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+alloy-chains = { workspace = true }
+alloy-contract = { workspace = true }
+alloy-network = { workspace = true }
+alloy-primitives = { workspace = true }
+alloy-provider = { workspace = true, features = ["ws"] }
+alloy-rpc-types = { workspace = true }
+alloy-signer-local = { workspace = true }
+alloy-sol-macro = { workspace = true }
+alloy-sol-types = { workspace = true }
+alloy-transport = { workspace = true }
+dotenv = { workspace = true }
+eyre = { workspace = true }
+tokio = { workspace = true, features = ["rt", "rt-multi-thread", "macros"] }
+tracing-subscriber = { workspace = true }
+url = { workspace = true }
+

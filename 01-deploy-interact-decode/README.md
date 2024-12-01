@@ -73,20 +73,20 @@ cargo run
 
 Upon running, you should see output similar to:
 
-```
+```shell
 📦 Contract deployed with initial value: 1
 🔍 Initial value retrieved from contract: 1
-🔄 Transaction sent to set new value. Transaction hash: 0x523975fa69b24c2e273f70e44fe81dc601f0b0713dc3ff132cf654958f3a8b82
-🧾 Transaction receipt obtained. Receipt hash: 0x523975fa69b24c2e273f70e44fe81dc601f0b0713dc3ff132cf654958f3a8b82
-⚡️ Event: ValueChanged - newValue: 2
+🔄 Transaction sent to set new value. Transaction hash: 0x2b9133f299ae7ecf61fd29d7972186a9cf4fbdcf44026e9870c1f63342140a58
+🧾 Transaction receipt obtained. Receipt hash: 0x2b9133f299ae7ecf61fd29d7972186a9cf4fbdcf44026e9870c1f63342140a58
+⚡️ Event: ValueChanged - updater: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266, oldValue: 1, newValue: 2
 🔍 Updated value retrieved from contract: 2
 🔍 Initial contract balance: 0.000000000000000000 Ξ
-🔍 Initial signer balance: 9999.990342325640506152 Ξ
-🔄 Transaction sent to deposit Ether. Transaction hash: 0xdc5e49931f9ecabe1baa25eab91e83ce7113ab9606eddf1de7264a563b432f7c
-🧾 Transaction receipt obtained. Receipt hash: 0xdc5e49931f9ecabe1baa25eab91e83ce7113ab9606eddf1de7264a563b432f7c
-⚡️ Event: EtherReceived - sender: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266; amount: 1000000000000000
+🔍 Initial signer balance: 9999.999782077810858145 Ξ
+🔄 Transaction sent to deposit Ether. Transaction hash: 0x52594caf0e64a3d48619f1bf234219816ead6a637ae6f7225912d59e96837f8c
+🧾 Transaction receipt obtained. Receipt hash: 0x52594caf0e64a3d48619f1bf234219816ead6a637ae6f7225912d59e96837f8c
+⚡️ Event: EtherReceived - sender: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266; amount: 0.001000000000000000 Ξ, newBalance: 0.001000000000000000 Ξ
 🔍 Contract balance after deposit: 0.001000000000000000 Ξ
-🔍 Signer balance after deposit: 9999.989342002897191564 Ξ
+🔍 Signer balance after deposit: 9999.998764432830121729 Ξ
 ⚠️ Call reverted with SampleError: "hello from revert!"
 ```
 
