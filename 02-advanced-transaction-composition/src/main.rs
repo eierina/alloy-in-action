@@ -259,11 +259,7 @@ pub fn calculate_base_fee_per_gas(
         current_base_fee + base_fee_change
     } else {
         // Decrease base fee by the calculated change, ensuring it doesn't go below zero
-        if current_base_fee > base_fee_change {
-            current_base_fee - base_fee_change
-        } else {
-            0
-        }
+        current_base_fee.saturating_sub(base_fee_change)
     }
 }
 
