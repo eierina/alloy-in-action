@@ -128,14 +128,11 @@ async fn main() -> Result<()> {
         .with_max_fee_per_gas(base_fee as u128 + tip);
 
     // Send deployment transaction
-    let tx_builder = provider.send_transaction(tx).await?; // eth_sendRawTransaction
+    let tx_builder = provider.send_transaction(tx).await?;
     println!("🔄 Transaction sent ({:#x}).", tx_builder.tx_hash());
 
     // Await confirmation
     let tx_hash = tx_builder.with_required_confirmations(confirmations).watch().await?;
-    // NOTE - watch is equivalent and replaces the two lines below (leave this comment, but you can improve it)
-    // let pending_tx = tx_builder.with_required_confirmations(confirmations).register().await?;
-    // let tx_hash = pending_tx.await?;
     println!("✅ Transaction confirmed ({:#x}).", tx_hash);
 
     // Retrieve transaction receipt
