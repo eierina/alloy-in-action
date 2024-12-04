@@ -11,7 +11,6 @@ use eyre::Result;
 use url::Url;
 use alloy_network::TransactionBuilder;
 use alloy_rpc_types::{BlockId, TransactionRequest};
-use crate::SampleContract::{getValueCall};
 use alloy_sol_types::private::Bytes;
 use utils::parse_units;
 
@@ -196,12 +195,11 @@ async fn main() -> Result<()> {
         .with_input(tx_data)
         .with_to(deploy_address)
         .with_from(signer_address)
-        .with_kind(TxKind::Call(deploy_address))
-        ;
+        .with_kind(TxKind::Call(deploy_address));
 
     // Execute getValue call
     let result = provider.call(&tx).await?;
-    let decoded_value = getValueCall::abi_decode_returns(&result, true)?;
+    let decoded_value = SampleContract::getValueCall::abi_decode_returns(&result, true)?;
     let current_value = decoded_value.currentValue;
 
     println!("🔍 Current value from contract: {}", current_value);
