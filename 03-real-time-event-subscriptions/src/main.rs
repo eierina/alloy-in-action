@@ -1,10 +1,10 @@
-use std::{io::stdin, path::Path, sync::Arc};
+use std::{io::stdin, path::Path};
 use eyre::Result;
 use futures::StreamExt;
 use url::Url;
 use alloy_network::EthereumWallet;
-use alloy_primitives::{Address, U256, utils::Unit};
-use alloy_provider::{Provider, ProviderBuilder, WsConnect};
+use alloy_primitives::{Address, B256, U256, utils::Unit};
+use alloy_provider::{Provider, ProviderBuilder, WalletProvider, WsConnect};
 use alloy_rpc_types::{BlockNumberOrTag, Filter};
 use alloy_signer_local::PrivateKeySigner;
 use alloy_sol_macro::sol;
@@ -65,55 +65,67 @@ async fn main() -> Result<()> {
     // Initialize tracing subscriber for logging
     tracing_subscriber::fmt::init();
 
-    // Create signer and wallet
+    // Initialize signers and wallet
     let private_key = std::env::var("ANVIL_PRIVATE_KEY")?;
+    let secondary_private_key = std::env::var("ANVIL_SECONDARY_PRIVATE_KEY")?;
     let signer: PrivateKeySigner = private_key.parse()?;
+    let secondary_signer: PrivateKeySigner = secondary_private_key.parse()?;
+    let signer_address = signer.address();
+    let secondary_signer_address = secondary_signer.address();
     let wallet: EthereumWallet = EthereumWallet::from(signer);
 
     // Set up provider using WebSocket
     let ws_url = std::env::var("ANVIL_WS_URL")?;
     let ws_url = Url::parse(&ws_url)?;
-    let provider = ProviderBuilder::new()
+    let mut provider = ProviderBuilder::new()
         .with_recommended_fillers()
         .wallet(wallet)
         .on_ws(WsConnect::new(ws_url)).await?;
 
-    let provider = Arc::new(provider);
-
     // Deploy the contract with an initial value of 1
     let initial_value = U256::from(1);
-    let contract = SampleContract::deploy(&provider, initial_value).await?;
+    let mut contract = SampleContract::deploy(provider.clone(), initial_value).await?;
     let contract_address: Address = *contract.address();
     println!(
         "📦 Contract deployed at address {} with initial value: {}",
         &contract_address, initial_value
     );
 
+    // Set up event filters
+    let address_filter: Vec<B256> = vec![
+        B256::left_padding_from(&signer_address.0.0),
+        B256::left_padding_from(&secondary_signer_address.0.0)
+    ];
+
     // Create a filter for the ValueChanged event starting from the latest block
     let value_changed_filter = contract
         .ValueChanged_filter()
+        .topic1(address_filter.clone())
         .from_block(BlockNumberOrTag::Latest);
 
     // Subscribe to the ValueChanged event logs
     let value_changed_subscription = value_changed_filter.subscribe().await?;
-    println!("🔔 Subscribed to ValueChanged events.");
+    println!("📡 Subscribed to ValueChanged events.");
 
     // Convert the subscription into a stream for processing
     let mut value_changed_stream = value_changed_subscription.into_stream();
 
     // Spawn a task to handle incoming ValueChanged events
     tokio::spawn(async move {
-        println!("🚀 Listening for ValueChanged events...");
+        println!("👂 Listening for ValueChanged events...");
         while let Some(result) = value_changed_stream.next().await {
             match result {
                 Ok((event, log)) => {
                     // Print details of the ValueChanged event
                     println!(
-                        "⚡️ ValueChanged - updater: {}, oldValue: {}, newValue: {} [{}]",
+                        "⚡️ |ValueChanged| - updater: {}, oldValue: {}, newValue: {} [{}]",
                         event.updater, event.oldValue, event.newValue, log.address()
                     );
                 }
-                Err(e) => eprintln!("⚠️ Error processing event: {:?}", e),
+                Err(e) => {
+                    eprintln!("⚠️ Error processing event: {:?}", e)
+                    // Handle error ...
+                }
             }
         }
     });
@@ -121,23 +133,24 @@ async fn main() -> Result<()> {
     // Create a combined filter for multiple events
     let events_filter = Filter::new()
         .address(contract_address)
+        .topic1(address_filter.clone())
         .event_signature(vec![
-                ValueChanged::SIGNATURE_HASH,
-                EtherReceived::SIGNATURE_HASH,
-                EtherWithdrawn::SIGNATURE_HASH
+            ValueChanged::SIGNATURE_HASH,
+            EtherReceived::SIGNATURE_HASH,
+            EtherWithdrawn::SIGNATURE_HASH
         ])
         .from_block(BlockNumberOrTag::Latest);
 
     // Subscribe to the combined events filter
     let events_subscription = provider.subscribe_logs(&events_filter).await?;
-    println!("🔔 Subscribed to combined events.");
+    println!("📡 Subscribed to combined events.");
 
     // Convert the subscription into a stream for processing
     let mut events_stream = events_subscription.into_stream();
 
     // Spawn a task to listen and decode all contract events into their specific types
     tokio::spawn(async move {
-        println!("🚀 Listening for events...");
+        println!("👂 Listening for events...");
         while let Some(log) = events_stream.next().await {
             // Decode the log into SampleContractEvents enum
             match SampleContractEvents::decode_log(log.as_ref(), true) {
@@ -145,13 +158,13 @@ async fn main() -> Result<()> {
                     match event.data {
                         SampleContractEvents::ValueChanged(e) => {
                             println!(
-                                "⚡️ ValueChanged - updater: {}, oldValue: {}, newValue: {} [{}] ",
+                                "⚡️ ValueChanged   - updater: {}, oldValue: {}, newValue: {} [{}] ",
                                 e.updater, e.oldValue, e.newValue, log.address()
                             );
                         }
                         SampleContractEvents::EtherReceived(e) => {
                             println!(
-                                "⚡️ EtherReceived - sender: {}, amount: {}, newBalance: {} [{}]",
+                                "⚡️ EtherReceived  - sender: {}, amount: {}, newBalance: {} [{}]",
                                 e.sender, e.amount, e.newBalance, log.address()
                             );
                         }
@@ -163,28 +176,37 @@ async fn main() -> Result<()> {
                         }
                     }
                 }
-                Err(_) => eprintln!("⚠️ Unknown event received."),
+                Err(_) => {
+                    eprintln!("⚠️ Unknown event received.")
+                    // Handle error ...
+                }
             }
         }
     });
 
     // Send Transactions
 
-    // 1. Set the contract value to 2 to trigger the ValueChanged event
-    println!("🔄 Sending transaction to set new value.");
-    let new_value = U256::from(2);
-    let _ = contract.setValue(new_value).send().await?;
+    for i in 0..2 {
+        // 1. Set the contract value to (i + 1) to trigger the ValueChanged event
+        println!("🔄 Sending transaction to set new value.");
+        let new_value = U256::from(i + 2);
+        let _ = contract.setValue(new_value).send().await?;
 
-    // 2. Deposit 1 pwei to the contract
-    let _ = contract.deposit().value(Unit::PWEI.wei()).send().await?;
-    println!("🔄 Sending transaction to deposit Ether.");
+        // 2. Deposit 1 Pwei to the contract
+        println!("🔄 Sending transaction to deposit Ether.");
+        let _ = contract.deposit().value(Unit::PWEI.wei()).send().await?;
 
-    // 3. Withdraw balance from the contract
-    println!("🔄 Sending transaction to withdraw Ether.");
-    let _ = contract.withdraw().send().await?;
+        // 3. Withdraw balance from the contract
+        println!("🔄 Sending transaction to withdraw Ether.");
+        let _ = contract.withdraw().send().await?;
+
+        // Change the signer
+        provider.wallet_mut().register_default_signer(secondary_signer.clone());
+        contract = SampleContract::new(contract_address, provider.clone());
+    }
 
     // Keep the main function alive until all expected events are processed
-    println!("🍿 All transactions sent. Waiting for events. Press Enter to exit.");
+    println!("⏳ All transactions sent. Waiting for events. Press Enter to exit.");
     stdin().read_line(&mut String::new())?;
 
     Ok(())

@@ -74,6 +74,7 @@ async fn main() -> Result<()> {
     let signer_address = signer.address();
     let wallet: EthereumWallet = EthereumWallet::from(signer);
 
+
     // Set up provider with chain ID, wallet, and network details (using WebSocket)
     let ws_url = std::env::var("ANVIL_WS_URL")?;
     let ws_url = Url::parse(&ws_url)?;
